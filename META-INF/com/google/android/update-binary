@@ -47,65 +47,6 @@ cleanup() {
 	[ "$zip" ] && rm /tmp/console
 }
 
-install() {
-	setperm "$2" "$3" "$tmp$1"
-	if [ "$4" ]; then
-		cp -r "$tmp$1" "$(dirname "$4")/"
-		return
-	fi
-	cp -r "$tmp$1" "$(dirname "$1")/"
-}
-
-# installapp "App Name" "appfile.apk" "play.store.package.name"
-# -> if the app package is found in the play store app database, then don't install it
-installapp() {
-	installto=/data/app/
-	if [ "$3" ]; then
-		for appdir in "/data/app/$3"*; do
-			[ -d "$appdir" ] || continue
-			echo "Found app directory: $appdir"
-			if [ ! -f /data/data/com.android.vending/databases/localappstate.db ]; then
-				echo "Could not find Play Store app database!"
-			# this should also catch paid/alternative versions if they are suffixed
-			elif strings /data/data/com.android.vending/databases/localappstate.db | grep -q "^$3"; then
-				rm -f "/data/app/$2"
-				print "- Found Play Store installed $1"
-				return 0
-			fi
-			rm -f "/data/app/$2"
-			installto=$appdir/base.apk
-			break
-		done
-	fi
-	echo "Installing $1 to $installto"
-	print "- Installing $1"
-	cp -f "$tmp/data/app/$2" "$installto" && return 0
-	print "- Failed to install $1!" && return 1
-}
-
-extract() {
-	rm -rf "$2"
-	mkdir -p "$2"
-	unzip -o "$1" -d "$2" -x "$3" ||
-		abort "Unable to extract! The zip may be corrupt or your device may not have enough RAM to proceed. Consider using a smaller installer if it is available."
-}
-
-setperm() {
-	find "$3" -type d -exec chmod "$1" {} \;
-	find "$3" -type f -exec chmod "$2" {} \;
-}
-
-symlink() {
-	rm "$2"
-	ln -s "$1" "$2"
-}
-
-mount() {
-	mountpoint -q "$1" || /sbin/busybox mount -o rw "$1" || abort "Unable to mount $1 as rw!"
-	>> "$1/.rw" && return || /sbin/busybox mount -o remount,rw "$1"
-	>> "$1/.rw" && return || abort "Unable to write to $1!"
-}
-
 print "##################################################"
 print "##################################################"
 print "##                                              ##"
@@ -133,7 +74,5 @@ sh tools/removechroot.sh "$zip"
 cleanup
 print "************************************************"
 print "*       Kali NetHunter is now Remove!          *"
-print "*   Don't forget to start the NetHunter app    *"
-print "*       to finish setting everything up!       *"
 print "************************************************"
 progress 1.0
